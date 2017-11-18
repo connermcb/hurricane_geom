@@ -14,9 +14,11 @@ f <- "ebtrk_atlc_1988_2015.txt"
 wd <- "c:/users/conner/adv_programming_R"
 
 
-get_hrcn_data <- function(f, wd, hrcn, yr){
+get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt", 
+                          wd="c:/users/conner/adv_programming_R", hrcn, yr){
   ## load data file
   # file name and set working directory
+  print(99)
   setwd(wd)
 
   # format hurricane, year variable as "[hurricane_name]-[year]"
@@ -78,32 +80,7 @@ get_hrcn_data <- function(f, wd, hrcn, yr){
   hrcn_data <- hrcns[hrcns$storm_id==hy,]
   return(hrcn_data)
 }
-  
-list_coords <- function(h_data){
-  return(h_data)[,c("latitude", "longitude")]
-}
-  
 
-
-choose_loc <- function(lat=NULL, lon=NULL, h_data){
-  if(is.null(lat) & is.null(lon)){
-    stop("No search value given")
-  }
-  if(!is.null(lat) & is.null(lon)){
-    if(!(lon %in% h_data$longitude)){
-      stop("Not a valid longitude")
-    }
-    return(subset(h_data, latitude==lat))
-  }
-  if(is.null(lat) & !is.null(lon)){
-    if(!(lat %in% h_data$latitude)){
-      stop("Not a valid latitude")
-    }
-    return(subset(h_data, longitude==lon))
-  }else{
-    return(subset(h_data, longitude==lon & latitude==lat))
-  }
-}
 
 test <- melt(test[3:9], 
      id.vars = c('latitude', 'longitude', 'wind_speed'),
@@ -125,7 +102,7 @@ mtrs_per_mile <- 1609.344
 data <- data.frame(matrix(nrow=0, ncol=3))
 colnames(data) <- c("wind_speed", "longitude", "latitude")
 
-class(data$wind_speed)
+
 
 get_coords <- function(d){
   for(i in 1:nrow(d)){
@@ -142,5 +119,4 @@ get_coords <- function(d){
 }
 
 
-get_coords(test)
 
