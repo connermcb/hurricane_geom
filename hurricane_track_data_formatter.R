@@ -90,11 +90,8 @@ test <- test %>%
                                   )
                            )
          )
-test["wind_speed"] <- as.factor(as.character(test$wind_speed))
 
-test$wind_speed
-
-
+test
 mtrs_per_mile <- 1609.344
 
 data <- data.frame(matrix(nrow=0, ncol=3))
@@ -119,23 +116,53 @@ get_coords <- function(d){
 
 get_coords(test)
 
+GeomHURRICANE <- ggproto("GeomHURRICANE", Geom,
+                   required_aes = c("x", "y", "group"),
+                   default_aes = aes(colour=NA, fill=NA, size=0.5, linetype=1, 
+                                     alpha=NA),
+                   draw_key = draw_key_polygon,
+                   draw_panel = function (data, panel_scales, coord){
+                     n <- nrow(data)
+                     if (n == 1) 
+                       return(zeroGrob())
+                     munched <- coord_munch(coord, data, panel_scales)
+                     munched <- munched[order(munched$group), ]
+                     first_idx <- !duplicated(munched$group)
+                     first_rows <- munched[first_idx, ]
+                     ggplot2:::ggname("geom_hurricane", 
+                            polygonGrob(munched$x, munched$y, 
+                                        default.units = "native", 
+                                        id = munched$group, 
+                                        gp = gpar(col = first_rows$colour,  
+                                                  fill = alpha(first_rows$fill, 
+                                                               first_rows$alpha), 
+                                                  lwd = first_rows$size * .pt, 
+                                                  lty = first_rows$linetype)))
 
-get_map(location = c(lon=test[1,"longitude"], lat=test[1,"latitude"]), 
+                   }
+)
+
+geom_hurricane <- function (mapping = NULL, data = NULL, stat = "identity", 
+                            position = "identity", ..., na.rm = FALSE, 
+                            show.legend = NA, inherit.aes = TRUE){
+  ggplot2::layer(data = data, mapping = mapping, stat = stat, geom = GeomHURRICANE, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(na.rm = na.rm, ...))
+}
+
+get_map(location = c(lon=test[1,"longitude"], lat=test[1,"latitude"]),
         zoom=6, maptype = "toner-background") %>%
-  ggmap(extent="device") +
-  geom_polygon(data=data, 
-               aes(x=longs, y=lats, 
-                   group=wind_speed, color=factor(wind_speed), 
-                   fill=factor(wind_speed)), alpha=0.5)+
+  ggmap(extent="device")+
+    geom_hurricane(data=data,
+                   aes(x=longs, y=lats,
+                       group=wind_speed, colour=factor(wind_speed),
+                       fill=factor(wind_speed)), alpha=0.5)+
   scale_color_manual(name="Wind Speed (knts)",
                      values=c("red","orange", "yellow"))+
   scale_fill_manual(name="Wind Speed (knts)",
                     values=c("red", "orange", "yellow"))
 
 
-
-
-
-
-
+geom_polygon
+geom_hurricane
 
