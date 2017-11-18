@@ -72,8 +72,8 @@ hrcns["longitude"] <- hrcns["longitude"] * -1
 head(hrcns)
 
 ike_2008 <- hrcns[hrcns$storm_id=="IKE-2008",]
-
-test <- ike_2008[ike_2008$latitude == 30.3,]
+table(ike_2008$latitude)
+test <- ike_2008[ike_2008$latitude == 26.9,]
 
 
 
@@ -90,8 +90,9 @@ test <- test %>%
                                   )
                            )
          )
+test["wind_speed"] <- as.factor(as.character(test$wind_speed))
 
-test
+test$wind_speed
 
 
 mtrs_per_mile <- 1609.344
@@ -99,51 +100,37 @@ mtrs_per_mile <- 1609.344
 data <- data.frame(matrix(nrow=0, ncol=3))
 colnames(data) <- c("wind_speed", "longs", "lats")
 
-data
+class(data$wind_speed)
 
 get_coords <- function(d){
   for(i in 1:nrow(d)){
     c <- d[i, ]
     dist_mtrs <- d[i, "value"] * mtrs_per_mile
-    for(angle in (0:90)){
+    for(angle in (0:89)){
       new_points <- destPoint(c(d[i, "longitude"], d[i, "latitude"]), 
                               angle + 90 * d[i, "variable"], dist_mtrs)
       lat <- new_points[1, "lat"][[1]]
-      print(lat)
-      print(class(lat))
       lon <- new_points[1, "lon"][[1]]
       data <<- rbind(data, setNames(as.list(c(d[i, "wind_speed"], lon, lat)), names(data)))
     }
   }
 }
+
+
 get_coords(test)
 
-data
 
-names(data)
-l <- split(d, wind_speed)
-coords <- unsplit(do.call(rbind, sapply(l, function(x){})))
-
-test <- test[1:4,]
-apply(test, 2, function(x){print(x[[1]])})
-
-
-lats
-longs
-
-
-data <- data.frame(cbind(longs, lats))
-data
-
-
-
-get_map("Texas", zoom=6, maptype = "toner-background") %>%
+get_map(location = c(lon=test[1,"longitude"], lat=test[1,"latitude"]), 
+        zoom=6, maptype = "toner-background") %>%
   ggmap(extent="device") +
   geom_polygon(data=data, 
                aes(x=longs, y=lats, 
-                   group=wind_speed, color=wind_speed, 
-                   fill=wind_speed, alpha=0.5))
-
+                   group=wind_speed, color=factor(wind_speed), 
+                   fill=factor(wind_speed)), alpha=0.5)+
+  scale_color_manual(name="Wind Speed (knts)",
+                     values=c("red","orange", "yellow"))+
+  scale_fill_manual(name="Wind Speed (knts)",
+                    values=c("red", "orange", "yellow"))
 
 
 
