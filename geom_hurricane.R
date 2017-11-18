@@ -11,12 +11,14 @@
 #' @import grid
 #' 
 #' 
-GeomHURRICANE <- ggproto("GeomHURRICANE", Geom,
-                         required_aes = c("x", "y", "group"),
-                         default_aes = aes(colour=NA, fill=NA, size=0.5, linetype=1, 
-                                           alpha=NA),
+GeomHURRICANE <- ggproto("GeomHURRICANE", ggplot2::Geom,
+                         required_aes = c("x", "y", 
+                                          "r_ne", "r_nw", "r_sw", "r_se"),
+                         default_aes = ggplot2::aes(colour=NA, fill="gray20", size=0.5, linetype=1, 
+                                           alpha=0.7),
                          draw_key = ggplot2::draw_key_polygon,
-                         draw_panel = function (data, panel_scales, coord){
+                         draw_panel = function(data, panel_scales, coord){
+                           print(data)
                            n <- nrow(data)
                            if (n == 1) 
                              return(grid::zeroGrob())
@@ -29,8 +31,8 @@ GeomHURRICANE <- ggproto("GeomHURRICANE", Geom,
                                                         default.units = "native", 
                                                         id = trnsfrmd$group, 
                                                         gp = gpar(col = first_rows$colour,  
-                                                                  fill = alpha(first_rows$fill, 
-                                                                               first_rows$alpha), 
+                                                                  fill = first_rows$fill, 
+                                                                  alpha = first_rows$alpha, 
                                                                   lwd = first_rows$size * .pt, 
                                                                   lty = first_rows$linetype)))
                            
@@ -72,7 +74,7 @@ GeomHURRICANE <- ggproto("GeomHURRICANE", Geom,
 #' @param inherit.aes
 #' @param scale_radii plot scaling factor (0, 1] 
 #' 
-#' @return ggplot object plot layer
+#' @return ggplot2 object plot layer
 #' 
 #' @import tidyr
 #' @import dplyr
@@ -83,51 +85,6 @@ geom_hurricane <- function (mapping = NULL, data = NULL, stat = "identity",
                             position = "identity", ..., na.rm = FALSE, 
                             show.legend = NA, inherit.aes = TRUE, 
                             scale_radii=1){
-  ## data to long form by quadrants
-  long_data <- tidyr::melt(data[3:9], 
-               id.vars = c('latitude', 'longitude', 'wind_speed'),
-               measure.vars = c('ne', 'nw', 'sw', 'se')) %>% 
-    ## organize by grouping factor
-    dplyr::arrange(wind_speed)
-  
-  ## transform directions to numeric values to facilitate calculations
-  long_data <- long_data %>%
-    dplyr::mutate(variable = ifelse(variable=="ne", 0, 
-                             ifelse(variable=="nw", 1,
-                                    ifelse(variable=="sw", 2, 3)
-                             )))
-  
-  ## variables for geographic distance calculations with `geosphere`.
-  mtrs_per_mile <- 1609.344
-  quad_dgrs <- 0:89
-  
-  ## empty df for collecting plot coordinates during loop
-  df_coords <- data.frame(matrix(nrow=0, ncol=3))
-  colnames(df_coords) <- c("wind_speed", "longitude", "latitude")
-  
-  ## main loop for calculating radii by wind_speed and quadrant
-  get_coords <- function(d){
-    for(i in 1:nrow(d)){
-      c <- d[i, ]
-      ## calculate distance and apply scale
-      dist_mtrs <- d[i, "value"] * mtrs_per_mile * scale_radii
-      for(angle in quad_dgrs){
-        ## calculate distance from hurricane center
-        new_points <- geosphere::destPoint(c(d[i, "longitude"], d[i, "latitude"]), 
-                                angle + 90 * d[i, "variable"], dist_mtrs)
-        lat <- new_points[1, "lat"][[1]]
-        lon <- new_points[1, "lon"][[1]]
-        ## add new coordinates to dataframe
-        df_coords <<- rbind(df_coords, 
-                            setNames(as.list(c(d[i, "wind_speed"], lon, lat)), 
-                                     names(df_coords)
-                                     )
-                            )
-      }
-    }
-  }
-  ## apply loop function
-  get_coords(test)
   
   ## create plot layer with processed data
   ggplot2::layer(data = df_coords, mapping = mapping, stat = stat, geom = GeomHURRICANE, 
