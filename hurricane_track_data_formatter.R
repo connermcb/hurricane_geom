@@ -83,10 +83,27 @@ list_coords <- function(h_data){
   return(h_data)[,c("latitude", "longitude")]
 }
   
-  
-ike2008 <- ike_2008[ike_2008$latitude == 26.9,]
-ike2008
 
+
+choose_loc <- function(lat=NULL, lon=NULL, h_data){
+  if(is.null(lat) & is.null(lon)){
+    stop("No search value given")
+  }
+  if(!is.null(lat) & is.null(lon)){
+    if(!(lon %in% h_data$longitude)){
+      stop("Not a valid longitude")
+    }
+    return(subset(h_data, latitude==lat))
+  }
+  if(is.null(lat) & !is.null(lon)){
+    if(!(lat %in% h_data$latitude)){
+      stop("Not a valid latitude")
+    }
+    return(subset(h_data, longitude==lon))
+  }else{
+    return(subset(h_data, longitude==lon & latitude==lat))
+  }
+}
 
 test <- melt(test[3:9], 
      id.vars = c('latitude', 'longitude', 'wind_speed'),
