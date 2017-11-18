@@ -1,20 +1,5 @@
-
-
-
-
-# import libraries
-library(data.table)
-library(dplyr)
-library(geosphere)
-library(ggmap)
-library(ggplot2)
-library(grid)
-library(lubridate)
-library(png)
-library(reshape)
-library(tidyr)
-
-
+## Suite of functions for geographically plotting hurricane windspeed and radii
+## data.
 
 #' @title \code{GeomHURRICANE}
 #' 
@@ -53,7 +38,7 @@ GeomHURRICANE <- ggproto("GeomHURRICANE", Geom,
 )
 
 
-#' @title \code{geom_hurricane}
+#' @title Plot Hurricane Wind Speed/Radii Data
 #' 
 #' @description
 #' \code{geom_hurricane} is a ggplot2 plotting layer designed to plot hurrican wind 
@@ -151,7 +136,7 @@ geom_hurricane <- function (mapping = NULL, data = NULL, stat = "identity",
 }
 
 
-#' @title \code{Load Hurricane Data}
+#' @title Load Hurricane Data
 #' 
 #' @description 
 #' \code{get_hrcn_data} loads hurricane data .txt file from local directory and
