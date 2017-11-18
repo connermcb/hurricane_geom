@@ -1,7 +1,12 @@
-```{r}
+
+library(data.table)
 library(dplyr)
+library(geosphere)
+library(ggmap)
+library(ggplot2)
 library(grid)
 library(lubridate)
+library(png)
 library(reshape)
 library(tidyr)
 
@@ -67,58 +72,77 @@ hrcns["longitude"] <- hrcns["longitude"] * -1
 head(hrcns)
 
 ike_2008 <- hrcns[hrcns$storm_id=="IKE-2008",]
-test <- ike_2008[ike_2008$latitude == 22.0,]
 
-test
+test <- ike_2008[ike_2008$latitude == 30.3,]
+
+
+
 test <- melt(test[3:9], 
      id.vars = c('latitude', 'longitude', 'wind_speed'),
      measure.vars = c('ne', 'nw', 'sw', 'se')
      ) %>% arrange(wind_speed)
 
 
-dists <- test[,6:9]
-lat <- test[1, 3]
-long <- test[1, 4]
-lats <- c()
-longs <- c()
+test <- test %>%
+  mutate(variable = ifelse(variable=="ne", 0, 
+                           ifelse(variable=="nw", 1,
+                                  ifelse(variable=="sw", 2, 3)
+                                  )
+                           )
+         )
 
-for(grp in 1:3){
-  temp_lats <- c()
-  temp_longs <- c()
-  for(quad in 0:3){
-    for(angle in (0:90 +(90 * quad))){
-      new_lat <- lat + (dists[grp, quad+1] * cos(angle)/111111)
-      temp_lats <- c(temp_lats, new_lat)
-      new_long <- long + (dists[grp, quad+1] * sin(angle)/cos(lat)/111111)
-      temp_longs <- c(temp_longs, new_long)
+test
+
+
+mtrs_per_mile <- 1609.344
+
+data <- data.frame(matrix(nrow=0, ncol=3))
+colnames(data) <- c("wind_speed", "longs", "lats")
+
+data
+
+get_coords <- function(d){
+  for(i in 1:nrow(d)){
+    c <- d[i, ]
+    dist_mtrs <- d[i, "value"] * mtrs_per_mile
+    for(angle in (0:90)){
+      new_points <- destPoint(c(d[i, "longitude"], d[i, "latitude"]), 
+                              angle + 90 * d[i, "variable"], dist_mtrs)
+      lat <- new_points[1, "lat"][[1]]
+      print(lat)
+      print(class(lat))
+      lon <- new_points[1, "lon"][[1]]
+      data <<- rbind(data, setNames(as.list(c(d[i, "wind_speed"], lon, lat)), names(data)))
     }
   }
-  lats <- c(lats, temp_lats)
-  longs <- c(longs, temp_longs)
 }
+get_coords(test)
+
+data
+
+names(data)
+l <- split(d, wind_speed)
+coords <- unsplit(do.call(rbind, sapply(l, function(x){})))
+
+test <- test[1:4,]
+apply(test, 2, function(x){print(x[[1]])})
+
+
 lats
 longs
-test_poly <- polygonGrob(longs, lats, gp = gpar(lty=1, lwd=0.5))
-grid.draw(test_poly)
-windows()
-grid.newpage()
-dev.list()
-my_circle <- circleGrob(x=0.5, y=0.5, r=0.5, gp=gpar(col="gray", lty=3))
-grid.draw(my_circle)
-library(ggplot2)
+
+
 data <- data.frame(cbind(longs, lats))
 data
-ggplot(data=data)+
-  geom_polygon(aes(x=longs, y=lats, group=1))
-library(grid)
-library(png)
 
-img.path <- system.file("img", "Rlogo.png", package="png")
-bg <- readPNG(img.path)
-background <- rasterGrob(unclass(bg))
 
-grid.draw(background)
-```
+
+get_map("Texas", zoom=6, maptype = "toner-background") %>%
+  ggmap(extent="device") +
+  geom_polygon(data=data, 
+               aes(x=longs, y=lats, 
+                   group=wind_speed, color=wind_speed, 
+                   fill=wind_speed, alpha=0.5))
 
 
 
