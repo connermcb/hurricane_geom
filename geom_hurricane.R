@@ -64,12 +64,16 @@ Geom_Hurricane <- ggproto("GeomHurricane", ggplot2::Geom,
                                                     scale_radii=1),
                          draw_key = ggplot2::draw_key_polygon,
                          draw_group = function(data, panel_scales, coord){
-                           print(class(data))
+                           
+                           ## get hurricane center
                            center <- data[1, 3:4]
+                           
+                           ## calculate plot pairs
                            coords <- get_dests(center, 
                                                data[1, 5:8],
                                                data[1, "scale_radii"])
-
+                           
+                           ## scale to plot panel
                            coords <- coord$transform(coords, panel_scales)
                 
                 grid::polygonGrob(
