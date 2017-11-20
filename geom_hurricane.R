@@ -1,5 +1,46 @@
 ## Suite of functions for geographically plotting hurricane windspeed and radii
 ## data.
+#' @title Calculate Plot Points
+#' 
+#' @description 
+#' \code{get_dests} takes a coordinate pair \code{pnt} corresponding to the 
+#' center of hurricane, a vector of four distances \code{dists} in miles that
+#' are the distances that the particular wind speed being processed extends in 
+#' the four quadrants. The distances are respectively NE, NW, SW, SE. The
+#' function calculates the 364 coordinate pairs necessary to plot a polygonGrob
+#' object and scales them according to the scaling value \code{scl} passed from
+#' \code{GeomHurricane}.
+#' 
+#' @param pnt vector of class numeric longitude and latitude values in degrees 
+#' and in that order.
+#' @param dists vector of class numeric, four radii distances in miles for 
+#' cartisian quadrants.
+#' @param scl float value (0,1] for scaling wind radii plot
+#' 
+#' @import geosphere
+#' 
+#' @return dataframe object with two columns corresponding respectively to 
+#' longitude and latitude values of coordinate pairs, labeled as `x` and `y` to
+#' facilitate reading in polygonGrob function.
+#' 
+#' @export
+get_dests <- function(pnt, dists, scl){
+  ## conversion value for miles to meters, list of angle per quadrant  
+  mtrs_p_mile <- 1609.344
+  quads <- list(0:90, 90:180, 180:270, 270:360)
+  
+  ## calculate complete set of points for one wind_speed group
+  coords <- do.call(rbind, lapply(1:4, function(i){
+    geosphere::destPoint(pnt, b=quads[[i]], d=dists[i]*mtrs_p_mile* scl)
+    }))
+  
+  ## rename variables for reading in polygonGrob
+  colnames(coords) <- c("x", "y")
+
+  return(data.frame(coords))
+}
+
+
 
 #' @title \code{GeomHURRICANE}
 #' 
@@ -11,31 +52,31 @@
 #' @import grid
 #' 
 #' 
-GeomHURRICANE <- ggproto("GeomHURRICANE", ggplot2::Geom,
-                         required_aes = c("x", "y", 
+Geom_Hurricane <- ggproto("GeomHurricane", ggplot2::Geom,
+                         required_aes = c("x", "y",
                                           "r_ne", "r_nw", "r_sw", "r_se"),
-                         default_aes = ggplot2::aes(colour=NA, fill="gray20", size=0.5, linetype=1, 
-                                           alpha=0.7),
+                         default_aes = ggplot2::aes(colour=NA,
+                                                    fill=NA,
+                                                    size=0.5,
+                                                    linetype=1,
+                                                    alpha=0.7,
+                                                    scale_radii=1),
                          draw_key = ggplot2::draw_key_polygon,
-                         draw_panel = function(data, panel_scales, coord){
-                           print(data)
-                           n <- nrow(data)
-                           if (n == 1) 
-                             return(grid::zeroGrob())
-                           
-                           trnsfrmd <- coord$transform(data, panel_scales)
-                           first_idx <- !duplicated(trnsfrmd$group)
-                           first_rows <- trnsfrmd[first_idx, ]
-                           ggplot2:::ggname("geom_hurricane", 
-                                            grid::polygonGrob(trnsfrmd$x, trnsfrmd$y, 
-                                                        default.units = "native", 
-                                                        id = trnsfrmd$group, 
-                                                        gp = gpar(col = first_rows$colour,  
-                                                                  fill = first_rows$fill, 
-                                                                  alpha = first_rows$alpha, 
-                                                                  lwd = first_rows$size * .pt, 
-                                                                  lty = first_rows$linetype)))
-                           
+                         draw_group = function(data, panel_scales, coord){
+                           print(class(data))
+                           center <- data[1, 3:4]
+                           coords <- get_dests(center, 
+                                               data[1, 5:8],
+                                               data[1, "scale_radii"])
+
+                           coords <- coord$transform(coords, panel_scales)
+                
+                grid::polygonGrob(
+                  x = coords$x,
+                  y = coords$y,
+                  gp = grid::gpar(col = data[1,]$colour, 
+                                  fill = data[1,]$fill, 
+                                  alpha = data[1,]$alpha))
                          }
 )
 
@@ -81,14 +122,18 @@ GeomHURRICANE <- ggproto("GeomHURRICANE", ggplot2::Geom,
 #' @import geosphere
 #' 
 #' @export
-geom_hurricane <- function (mapping = NULL, data = NULL, stat = "identity", 
-                            position = "identity", ..., na.rm = FALSE, 
-                            show.legend = NA, inherit.aes = TRUE, 
-                            scale_radii=1){
-  
+geom_hurricane <- function (mapping = NULL,
+                            data = NULL,
+                            stat = "identity",
+                            position = "identity",
+                            na.rm = FALSE,
+                            show.legend = NA,
+                            inherit.aes = TRUE,
+                            scale_radii=1,...){
   ## create plot layer with processed data
-  ggplot2::layer(data = df_coords, mapping = mapping, stat = stat, geom = GeomHURRICANE, 
-                 position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+  ggplot2::layer(data = data, mapping = mapping, stat = stat,
+                 geom = Geom_Hurricane, position = position,
+                 show.legend = show.legend, inherit.aes = inherit.aes,
                  params = list(na.rm = na.rm, ...))
 }
 
@@ -184,26 +229,43 @@ get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt",
 
 
 
+library(data.table)
+library(dplyr)
+library(geosphere)
+library(ggmap)
+library(lubridate)
+library(readr)
+library(tidyr)
+library(grid)
+
 ## test geom_hurricane
 getwd()
 setwd("./hurricane_geom/")
 
 ike2008 <- get_hrcn_data(hrcn="IKE", yr=2008)
 
-hrcn_data <- ike2008[ike2008$latitude==27.5,]
+hrcn_data <- ike2008[day(ike2008$date_time)==10,]
+hrcn_data
 
-## get base map
-get_map(location = c(lon=hrcn_data[1,"longitude"], lat=hrcn_data[1,"latitude"]),
-        zoom=6, maptype = "toner-background") %>%
-  ggmap(extent="device")+
-  
+
+str(lubridate)
+## create base map
+map_data <- get_map(c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
+        zoom=6, maptype = "toner-background")
+
+## plot
+ggmap(map_data, extent = "device")+
   ## add geom_hurricane layer using IKE data from 2008
-  geom_hurricane(data=ike2008,
-                 aes(x=longitude, y=latitude,
-                     group=wind_speed, colour=factor(wind_speed),
-                     fill=factor(wind_speed)), alpha=0.5, scale_radii=1)+
+  geom_hurricane(data=hrcn_data,
+                 aes(x=longitude, y=latitude, 
+                     r_ne=ne, r_nw=nw, r_sw=sw, r_se=se,
+                     color=factor(wind_speed),
+                     fill=factor(wind_speed)))+
   ## add color and legend
   scale_color_manual(name="Wind Speed (knts)",
                      values=c("red","orange", "yellow"))+
   scale_fill_manual(name="Wind Speed (knts)",
                     values=c("red", "orange", "yellow"))
+
+
+
