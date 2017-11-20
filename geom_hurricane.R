@@ -1,5 +1,6 @@
 ## Suite of functions for geographically plotting hurricane windspeed and radii
 ## data.
+
 #' @title Calculate Plot Points
 #' 
 #' @description 
@@ -244,11 +245,11 @@ setwd("./hurricane_geom/")
 
 ike2008 <- get_hrcn_data(hrcn="IKE", yr=2008)
 
-hrcn_data <- ike2008[day(ike2008$date_time)==10,]
+unique(ike2008$latitude)
+
+hrcn_data <- ike2008[ike2008$latitude==28.3,]
 hrcn_data
 
-
-str(lubridate)
 ## create base map
 map_data <- get_map(c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
         zoom=6, maptype = "toner-background")
