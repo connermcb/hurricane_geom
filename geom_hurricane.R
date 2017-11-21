@@ -163,16 +163,12 @@ geom_hurricane <- function (mapping = NULL,
 #' 
 #' @return dataframe class object containing subsetted and preprocessed 
 #' hurricane data.
-
 ## load and preliminary formatting of data
 get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt", 
-                          wd="c:/users/conner/adv_programming_R", hrcn, yr){
+                          wd="c:/users/conner/adv_programming_R"){
   ## load data file
   # file name and set working directory
   setwd(wd)
-  
-  # format hurricane, year variable as "[hurricane_name]-[year]"
-  hy <- paste0(as.character(hrcn), "-", as.character(yr))
   
   # read table from text file and set column names
   ext_tracks_widths <- c(7, 10, 2, 2, 3, 5, 5, 6, 4, 5, 4, 4, 5, 3, 4, 3, 3, 3,
@@ -228,11 +224,24 @@ get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt",
   
   hrcns["longitude"] <- hrcns["longitude"] * -1
   
-  hrcn_data <- hrcns[hrcns$storm_id==hy,]
+  
   return(hrcn_data)
 }
 
-
+get_one_hrcn <- function(f="ebtrk_atlc_1988_2015.txt", 
+                         wd="c:/users/conner/adv_programming_R",
+                         hrcn, yr){
+  ## format hurricane, year variable as "[hurricane_name]-[year]"
+  hy <- paste0(as.character(hrcn), "-", as.character(yr))
+  
+  ## check global environment for processed hurricane data
+  if("hrcn_data" %in% ls(envir = .GlobalEnv)){
+    hrcn_data <<- get_hrcn_data()
+  }
+  ## subset all hurricane data for `hrcn`
+  one_hrcn_data <- hrcns[hrcns$storm_id==hy,]
+  return(one_hrcn_data)
+}
 
 library(data.table)
 library(dplyr)
@@ -248,18 +257,23 @@ getwd()
 setwd("./hurricane_geom/")
 
 ike2008 <- get_hrcn_data(hrcn="IKE", yr=2008)
+head(ike2008)
 
-unique(ike2008$latitude)
+unique(ike2008$longitude)
 
-hrcn_data <- ike2008[ike2008$latitude==28.3,]
+hrcn_data <- ike2008[ike2008$longitude==-71.1,]
 hrcn_data
 
+all_hrcns <- 
 ## create base map
-map_data <- get_map(c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
-        zoom=6, maptype = "toner-background")
+map_data <- get_map("carribean",#c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
+        zoom=3, maptype = "satellite")
+
+ggmap(map_data, extent="device")+
+  geom_point(data=ike2008,aes(x=longitude, y=latitude), color="red")
 
 ## plot
-ggmap(map_data, extent = "device")+
+ggmap(map_data, extent = "device")
   ## add geom_hurricane layer using IKE data from 2008
   geom_hurricane(data=hrcn_data,
                  aes(x=longitude, y=latitude, 
