@@ -228,8 +228,19 @@ get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt",
   return(hrcns)
 }
 
-
-
+#' @title Subset Data by Single Storm
+#'
+#' @description 
+#' Function narrows scope of hurricane data set to a single storm based on name
+#' of storm and year. Storm names are recycled unless retired, and year variable
+#'  is included to disambiguate between storms with same name.
+#' 
+#' @param f name of full hurricane data file
+#' @param wd working directory or directory where file `f` can be found
+#' @param hrcn uppercase character vector corresponding to hurricane name
+#' @param yr integer vector corresponding to year of hurricane of interest
+#' 
+#' @return dataframe subset of hurricane dataset
 get_one_hrcn <- function(f="ebtrk_atlc_1988_2015.txt", 
                          wd="c:/users/conner/adv_programming_R",
                          hrcn, yr){
@@ -275,11 +286,12 @@ unique(ike2008$longitude)
 ## create base map
 map_data <- get_map("carribean",#c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
         zoom=3, maptype = "satellite")
-
+hrcn_data
 ## plot hurricane paths
 ggmap(map_data, extent="device")+
   scale_color_discrete(guide=FALSE)+
-  geom_point(data=hrcn_data_yr,aes(x=longitude, y=latitude, color=storm_id), size=0.5)
+  geom_point(data=hrcn_data_yr,aes(x=longitude, y=latitude, color=storm_id), 
+             size=1)
 
 ## plot wind speed radii
 ggmap(map_data, extent = "device")
