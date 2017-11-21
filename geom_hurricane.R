@@ -225,8 +225,10 @@ get_hrcn_data <- function(f="ebtrk_atlc_1988_2015.txt",
   hrcns["longitude"] <- hrcns["longitude"] * -1
   
   
-  return(hrcn_data)
+  return(hrcns)
 }
+
+
 
 get_one_hrcn <- function(f="ebtrk_atlc_1988_2015.txt", 
                          wd="c:/users/conner/adv_programming_R",
@@ -235,11 +237,11 @@ get_one_hrcn <- function(f="ebtrk_atlc_1988_2015.txt",
   hy <- paste0(as.character(hrcn), "-", as.character(yr))
   
   ## check global environment for processed hurricane data
-  if("hrcn_data" %in% ls(envir = .GlobalEnv)){
+  if(!('hrcn_data' %in% ls(envir = .GlobalEnv))){
     hrcn_data <<- get_hrcn_data()
   }
   ## subset all hurricane data for `hrcn`
-  one_hrcn_data <- hrcns[hrcns$storm_id==hy,]
+  one_hrcn_data <- hrcn_data[hrcn_data$storm_id==hy,]
   return(one_hrcn_data)
 }
 
@@ -249,6 +251,7 @@ library(geosphere)
 library(ggmap)
 library(lubridate)
 library(readr)
+library(stringr)
 library(tidyr)
 library(grid)
 
@@ -256,23 +259,29 @@ library(grid)
 getwd()
 setwd("./hurricane_geom/")
 
-ike2008 <- get_hrcn_data(hrcn="IKE", yr=2008)
+hrcn_data <- get_hrcn_data()
+hrcn_data_yr <- subset(hrcn_data, grepl("2006$", storm_id))
+tail(hrcn_data_yr)
+
+ike2008 <- get_one_hrcn(hrcn="IKE", yr=2008)
 head(ike2008)
 
 unique(ike2008$longitude)
 
-hrcn_data <- ike2008[ike2008$longitude==-71.1,]
-hrcn_data
 
-all_hrcns <- 
+
+
+
 ## create base map
 map_data <- get_map("carribean",#c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
         zoom=3, maptype = "satellite")
 
+## plot hurricane paths
 ggmap(map_data, extent="device")+
-  geom_point(data=ike2008,aes(x=longitude, y=latitude), color="red")
+  scale_color_discrete(guide=FALSE)+
+  geom_point(data=hrcn_data_yr,aes(x=longitude, y=latitude, color=storm_id), size=0.5)
 
-## plot
+## plot wind speed radii
 ggmap(map_data, extent = "device")
   ## add geom_hurricane layer using IKE data from 2008
   geom_hurricane(data=hrcn_data,
