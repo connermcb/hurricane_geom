@@ -256,6 +256,18 @@ get_one_hrcn <- function(f="ebtrk_atlc_1988_2015.txt",
   return(one_hrcn_data)
 }
 
+#'@title Plot Wind Radii Along Hurricane Path
+#'
+#'@description 
+#'Function takes a single hurricane and plots in animated sequence of wind radii
+#'along path of hurricane. Each wind radii plot fades as the next is plotted for
+#'the sake of clarity.
+#'
+#'@export
+plot_windradii_path <- function(x){}
+
+
+
 library(data.table)
 library(dplyr)
 library(geosphere)
@@ -275,17 +287,17 @@ hrcn_data_yr <- subset(hrcn_data, grepl("2006$", storm_id))
 tail(hrcn_data_yr)
 
 ike2008 <- get_one_hrcn(hrcn="IKE", yr=2008)
-head(ike2008)
+ike2008
 
 unique(ike2008$longitude)
 
-
-
+plot_data <- ike2008[ike2008$longitude==-80.3,]
+plot_data
 
 
 ## create base map
-map_data <- get_map("carribean",#c(hrcn_data[1,"longitude"], hrcn_data[1, "latitude"]),
-        zoom=3, maptype = "satellite")
+map_data <- get_map(c(plot_data[1,"longitude"], plot_data[1, "latitude"]),
+        zoom=6, maptype = "satellite")
 hrcn_data
 ## plot hurricane paths
 ggmap(map_data, extent="device")+
@@ -294,9 +306,9 @@ ggmap(map_data, extent="device")+
              size=1)
 
 ## plot wind speed radii
-ggmap(map_data, extent = "device")
+ggmap(map_data, extent = "device")+
   ## add geom_hurricane layer using IKE data from 2008
-  geom_hurricane(data=hrcn_data,
+  geom_hurricane(data=plot_data,
                  aes(x=longitude, y=latitude, 
                      r_ne=ne, r_nw=nw, r_sw=sw, r_se=se,
                      color=factor(wind_speed),
